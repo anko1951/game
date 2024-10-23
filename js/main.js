@@ -12,6 +12,9 @@ let gameOver = false;
 let retryKey;
 let retryText;
 let lastDirection = 'right'
+let score = 0;
+let coinCount = 0;
+let scoreText;
 
 // Phaser3の設定データ
 const config = {
@@ -113,6 +116,13 @@ function create() {
     // ハートのグループを作成
     heartGroup = this.add.group();
 
+    //コインのスコア
+    scoreText = this.add.text(D_HEIGHT -50,16,'Coins: 0 Score: 0',{
+        fontSize: '16px',
+        fill: '#000'
+    });
+    scoreText.setScrollFactor(0);
+
     // ゲームオーバーのテキストを作成
     gameOverText = this.add.text(0, 0, 'Game Over', {
         fontSize: '64px',
@@ -140,24 +150,29 @@ function create() {
     staticGroup.create(1375, D_HEIGHT, "ground2");
     staticGroup.create(1810, D_HEIGHT, "ground3");
     staticGroup.create(240, 240, "block");
-    staticGroup.create(600, 120, "block");
-    staticGroup.create(350, 230, "null");
-    staticGroup.create(400, 160, "null");
-    staticGroup.create(740, 160, "null");
+    staticGroup.create(1300, D_HEIGHT -40, "post");
+    staticGroup.create(1550, 280, "block");
+    staticGroup.create(1650, 200, "block");
+    staticGroup.create(1715, D_HEIGHT -110, "pillar");
 
     // プレイヤーと静的グループの衝突
     this.physics.add.collider(player, staticGroup);
 
     // コインのグループを作成
     let coinGroup = this.physics.add.group();
-    coinGroup.create(190, 0, "coin");
-    coinGroup.create(240, 0, "coin");
-    coinGroup.create(290, 0, "coin");
+    coinGroup.create(240, 220, "coin");
+    coinGroup.create(1300, 0, "coin");
+    coinGroup.create(1550, 0, "coin");
+    coinGroup.create(1650, 0, "coin");
+    coinGroup.create(1715, 0, "coin");
     this.physics.add.collider(coinGroup, staticGroup);
 
     // プレイヤーとコインのオーバーラップ処理
     this.physics.add.overlap(player, coinGroup, (p, c) => {
         c.destroy(); // コインを破壊
+        coinCount++;
+        score += 100;
+        scoreText.setText(`Coins: ${coinCount} Score: ${score}`);
     }, null, this);
 
     // カメラの設定
