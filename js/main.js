@@ -1,13 +1,16 @@
 const D_WIDTH = 480;
 const D_HEIGHT = 320;
+const BACKGROUND_WIDTH = 1920; // 背景画像の幅
 let player;
 let background;
 let spaceBar; // スペースキー用の変数
 let cursors; // カーソルキー用の変数
-let lives = 3; // 残機
+let lives = 1; // 残機
 let liveText; // 残機テキスト
 let gameOverText; // ゲームオーバーテキスト
 let gameOver = false;
+let retryKey;
+let retryText;
 
 // Phaser3の設定データ
 const config = {
@@ -28,7 +31,7 @@ const config = {
         default: "arcade",
         arcade: {
             debug: true,
-            gravity: { y: 450 }
+            gravity: { y: 300 }
         }
     }
 };
@@ -39,10 +42,12 @@ let phaser = new Phaser.Game(config);
 function preload() {
     console.log("preload!!");
     this.load.image("block", "./assets/block.png");
-    this.load.image("ground", "./assets/ground.png");
-    this.load.image("pillar", "./assets/block.png");
+    this.load.image("ground1", "./assets/ground1.png");
+    this.load.image("ground2", "./assets/ground2.png");
+    this.load.image("ground3", "./assets/ground3.png");
+    this.load.image("pillar", "./assets/pillar.png");
     this.load.image("post", "./assets/post.png");
-    this.load.image("sky", "./assets/sky.png");
+    this.load.image("back", "./assets/back.png");
     this.load.image("tanuki", "./assets/tanuki.png");
     this.load.image("coin", "./assets/coin.png");
 }
@@ -51,7 +56,7 @@ function create() {
     console.log("create!!");
 
     // 背景をタイル状に設定
-    background = this.add.tileSprite(0, 0, D_WIDTH * 4, D_HEIGHT, "sky").setOrigin(0, 0);
+    background = this.add.tileSprite(0, 0, BACKGROUND_WIDTH, D_HEIGHT, "back").setOrigin(0, 0);
 
     // プレイヤーを追加
     player = this.physics.add.sprite(240, 80, "tanuki");
@@ -63,12 +68,24 @@ function create() {
     });
 
     // ゲームオーバーのテキストを作成
-    gameOverText = this.add.text(0,0, 'Game Over', {
+    gameOverText = this.add.text(0, 0, 'Game Over', {
         fontSize: '64px',
         fill: '#ff0000'
     });
     gameOverText.setOrigin(0.5);
     gameOverText.setVisible(false); // 初期は非表示
+    
+    //ゲームオーバー時のリトライショートカットキーテキスト
+    retryText = this.add.text(0,0,'R push!',{
+        fontSize: '32px',
+        fill: '#fff'
+    });
+
+    retryKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    retryText.setOrigin(0.5);
+    retryText.setVisible(false);
+
+    
 
     // スペースキーとカーソルキーを登録
     spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -76,13 +93,13 @@ function create() {
 
     // 静的グループを作成してオブジェクトを配置
     let staticGroup = this.physics.add.staticGroup();
-    staticGroup.create(D_WIDTH / 2, D_HEIGHT - 32, "ground");
-    staticGroup.create(D_WIDTH * 2, D_HEIGHT - 32, "ground");
-    staticGroup.create(D_WIDTH * 3.5, D_HEIGHT - 32, "ground");
+    staticGroup.create(D_WIDTH / 0.81, D_HEIGHT, "ground1");
+    staticGroup.create(1375, D_HEIGHT, "ground2");
+    staticGroup.create(1810, D_HEIGHT, "ground3");
     staticGroup.create(240, 240, "block");
     staticGroup.create(600, 120, "block");
     staticGroup.create(350, 230, "post");
-    staticGroup.create(400, 160, "block");
+    staticGroup.create(400, 160, "pillar");
     staticGroup.create(740, 160, "pillar");
 
     // プレイヤーと静的グループの衝突
@@ -101,16 +118,13 @@ function create() {
     }, null, this);
 
     // カメラの設定
-    this.cameras.main.setBounds(0, 0, D_WIDTH * 4, D_HEIGHT);
+    this.cameras.main.setBounds(0, 0, BACKGROUND_WIDTH, D_HEIGHT);
     this.cameras.main.startFollow(player);
     liveText.setScrollFactor(0);
 }
 
 function update() {
     console.log("update!!");
-
-    // プレイヤーの移動に合わせて背景がスクロール
-    background.tilePositionX += player.body.velocity.x * 0.02;
 
     // 残機表示を画面の上部に固定
     liveText.setText(`Lives: ${lives}`); // 残機テキストを更新
@@ -126,7 +140,7 @@ function update() {
 
     // ジャンプ処理
     if (spaceBar.isDown && player.body.touching.down) {
-        player.setVelocityY(-250); // ジャンプの高さ
+        player.setVelocityY(-300); // ジャンプの高さ
     }
 
     // プレイヤーが画面外に落ちた場合
@@ -141,9 +155,34 @@ function update() {
             player.setPosition(240, 80); // プレイヤーを初期位置に戻す
         }
     }
-    if(gameOver){
+
+    if(gameOver && retryKey.isDown){
+        resetGame(this);
+    }
+
+    // ゲームオーバー時のテキストの位置をカメラの中心に設定
+    if (gameOver) {
         gameOverText.setPosition(
-            this.cameras.main.scrollX+D_WIDTH / 2,this.cameras.main.scrollY+D_HEIGHT /2 
+            this.cameras.main.scrollX + D_WIDTH / 2,
+            this.cameras.main.scrollY + D_HEIGHT / 2
         );
+        retryText.setPosition(
+            this.cameras.main.scrollX + D_WIDTH / 2,
+            this.cameras.main.scrollY + D_HEIGHT /2 + 40
+        );
+        retryText.setVisible(true);
+    }
+    
+    function resetGame(scene){
+        //ゲームオーバー解除
+        gameOver = false;
+        gameOverText.setVisible(false);
+        retryText.setVisible(false);
+
+        //プレイヤー初期位置にリセット
+        player.setPosition(240, 80);
+        lives = 1;
+
+        scene.physics.resume();
     }
 }
