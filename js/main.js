@@ -5,12 +5,13 @@ let player;
 let background;
 let spaceBar; // スペースキー用の変数
 let cursors; // カーソルキー用の変数
-let lives = 1; // 残機
-let liveText; // 残機テキスト
+let lives = 5; // 残機
+let heartGroup; // ハート画像のグループ
 let gameOverText; // ゲームオーバーテキスト
 let gameOver = false;
 let retryKey;
 let retryText;
+let lastDirection = 'right'
 
 // Phaser3の設定データ
 const config = {
@@ -50,6 +51,11 @@ function preload() {
     this.load.image("back", "./assets/back.png");
     this.load.image("tanuki", "./assets/tanuki.png");
     this.load.image("coin", "./assets/coin.png");
+    this.load.image("life", "./assets/Life.png"); // ハート画像
+    this.load.spritesheet("player","./assets/playerSprite.png",{
+        frameWidth:32,
+        frameHeight:32
+    });
 }
 
 function create() {
@@ -59,13 +65,53 @@ function create() {
     background = this.add.tileSprite(0, 0, BACKGROUND_WIDTH, D_HEIGHT, "back").setOrigin(0, 0);
 
     // プレイヤーを追加
-    player = this.physics.add.sprite(240, 80, "tanuki");
+    player = this.physics.add.sprite(240, 80, "player");
 
-    // 残機表示のテキストを作成
-    liveText = this.add.text(16, 16, `Lives: ${lives}`, {
-        fontSize: '32px',
-        fill: '#333'
+    this.anims.create({
+        key: 'walk_right',
+        frames:[{
+            key: 'player', frame: 15
+        },
+        {
+            key: 'player', frame: 16
+        },
+        {
+            key: 'player', frame: 17
+        }],
+        frameRate: 10,
+        repeat: -1
     });
+    this.anims.create({
+        key: 'walk_left',
+        frames:[{
+            key: 'player', frame: 45
+        },
+        {
+            key: 'player', frame: 46
+        },
+        {
+            key: 'player', frame: 47
+        }],
+        frameRate: 10,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'idle_right',
+        frames:[{key: 'player', frame: 16}],
+        frameRate: 10,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'idle_left',
+        frames:[{key: 'player', frame: 46}],
+        frameRate: 10,
+        repeat: -1
+    });
+
+    //player.anims.play('idle_right');
+
+    // ハートのグループを作成
+    heartGroup = this.add.group();
 
     // ゲームオーバーのテキストを作成
     gameOverText = this.add.text(0, 0, 'Game Over', {
@@ -74,18 +120,15 @@ function create() {
     });
     gameOverText.setOrigin(0.5);
     gameOverText.setVisible(false); // 初期は非表示
-    
-    //ゲームオーバー時のリトライショートカットキーテキスト
-    retryText = this.add.text(0,0,'R push!',{
+
+    // リトライショートカットのテキスト
+    retryText = this.add.text(0, 0, 'R push!', {
         fontSize: '32px',
         fill: '#fff'
     });
-
     retryKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     retryText.setOrigin(0.5);
     retryText.setVisible(false);
-
-    
 
     // スペースキーとカーソルキーを登録
     spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -98,9 +141,9 @@ function create() {
     staticGroup.create(1810, D_HEIGHT, "ground3");
     staticGroup.create(240, 240, "block");
     staticGroup.create(600, 120, "block");
-    staticGroup.create(350, 230, "post");
-    staticGroup.create(400, 160, "pillar");
-    staticGroup.create(740, 160, "pillar");
+    staticGroup.create(350, 230, "null");
+    staticGroup.create(400, 160, "null");
+    staticGroup.create(740, 160, "null");
 
     // プレイヤーと静的グループの衝突
     this.physics.add.collider(player, staticGroup);
@@ -120,22 +163,38 @@ function create() {
     // カメラの設定
     this.cameras.main.setBounds(0, 0, BACKGROUND_WIDTH, D_HEIGHT);
     this.cameras.main.startFollow(player);
-    liveText.setScrollFactor(0);
+
+    // 残機のハート画像を初期表示
+    updateLives();
+}
+
+function updateLives() {
+    heartGroup.clear(true, true); // 既存のハートを削除
+
+    for (let i = 0; i < lives; i++) {
+        heartGroup.create(16 + i * 40, 16, 'life').setScrollFactor(0); // ハート画像を表示
+    }
 }
 
 function update() {
     console.log("update!!");
 
-    // 残機表示を画面の上部に固定
-    liveText.setText(`Lives: ${lives}`); // 残機テキストを更新
-
     // プレイヤーの移動
     if (cursors.left.isDown) {
         player.setVelocityX(-200);
+        player.anims.play('walk_left', true);
+        lastDirection = 'left'
     } else if (cursors.right.isDown) {
         player.setVelocityX(200);
+        player.anims.play('walk_right', true);
+        lastDirection = 'right'
     } else {
         player.setVelocityX(0);
+        if(lastDirection === 'left'){
+            player.anims.play('idle_left');
+        }else{
+            player.anims.play('idle_right')
+        }
     }
 
     // ジャンプ処理
@@ -146,6 +205,7 @@ function update() {
     // プレイヤーが画面外に落ちた場合
     if (player.y > D_HEIGHT && !gameOver) {
         lives--; // 残機を減らす
+        updateLives(); // 残機のハート画像を更新
 
         if (lives <= 0) {
             this.physics.pause(); // 物理を一時停止
@@ -156,7 +216,7 @@ function update() {
         }
     }
 
-    if(gameOver && retryKey.isDown){
+    if (gameOver && retryKey.isDown) {
         resetGame(this);
     }
 
@@ -168,20 +228,21 @@ function update() {
         );
         retryText.setPosition(
             this.cameras.main.scrollX + D_WIDTH / 2,
-            this.cameras.main.scrollY + D_HEIGHT /2 + 40
+            this.cameras.main.scrollY + D_HEIGHT / 2 + 40
         );
         retryText.setVisible(true);
     }
-    
-    function resetGame(scene){
-        //ゲームオーバー解除
+
+    function resetGame(scene) {
+        // ゲームオーバー解除
         gameOver = false;
         gameOverText.setVisible(false);
         retryText.setVisible(false);
 
-        //プレイヤー初期位置にリセット
+        // プレイヤーを初期位置にリセット
         player.setPosition(240, 80);
-        lives = 1;
+        lives = 5; // 残機をリセット
+        updateLives(); // 残機表示を更新
 
         scene.physics.resume();
     }
