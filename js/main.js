@@ -35,7 +35,7 @@ const config = {
         default: "arcade",
         arcade: {
             debug: true,
-            gravity: { y: 300 }
+            gravity: { y: 650 }
         }
     }
 };
@@ -55,6 +55,7 @@ function preload() {
     this.load.image("tanuki", "./assets/tanuki.png");
     this.load.image("coin", "./assets/coin.png");
     this.load.image("life", "./assets/Life.png"); // ハート画像
+    this.load.image("clearArea","./assets/clear.png")
     this.load.spritesheet("player","./assets/playerSprite.png",{
         frameWidth:32,
         frameHeight:32
@@ -123,6 +124,9 @@ function create() {
     });
     scoreText.setScrollFactor(0);
 
+    const clearArea = this.add.image(BACKGROUND_WIDTH - 40,D_HEIGHT -40,"clearArea");
+    clearArea.setOrigin(0.5)
+
     // ゲームオーバーのテキストを作成
     gameOverText = this.add.text(0, 0, 'Game Over', {
         fontSize: '64px',
@@ -179,6 +183,8 @@ function create() {
     this.cameras.main.setBounds(0, 0, BACKGROUND_WIDTH, D_HEIGHT);
     this.cameras.main.startFollow(player);
 
+    this.physics.world.setBounds(0, 0, BACKGROUND_WIDTH, D_HEIGHT);
+
     // 残機のハート画像を初期表示
     updateLives();
 }
@@ -214,8 +220,16 @@ function update() {
 
     // ジャンプ処理
     if (spaceBar.isDown && player.body.touching.down) {
-        player.setVelocityY(-300); // ジャンプの高さ
+        player.setVelocityY(-350); // ジャンプの高さ
     }
+
+    //ステージ両端領域制限
+    if(player.x < 0){
+        player.setX(0);
+    }else if(player.x > BACKGROUND_WIDTH - player.width){
+        player.setX(BACKGROUND_WIDTH - player.width);
+    }
+
 
     // プレイヤーが画面外に落ちた場合
     if (player.y > D_HEIGHT && !gameOver) {
@@ -229,6 +243,11 @@ function update() {
         } else {
             player.setPosition(240, 80); // プレイヤーを初期位置に戻す
         }
+    }
+    if(player.x >= BACKGROUND_WIDTH - player.width){
+        gameOver = true;
+        gameOverText.setText('Game Clear');
+        gameOverText.setVisible(true);
     }
 
     if (gameOver && retryKey.isDown) {
@@ -261,4 +280,5 @@ function update() {
 
         scene.physics.resume();
     }
+
 }
