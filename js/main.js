@@ -5,7 +5,7 @@ let player;
 let background;
 let spaceBar; // スペースキー用の変数
 let cursors; // カーソルキー用の変数
-let lives = 5; // 残機
+let lives = 2; // 残機
 let heartGroup; // ハート画像のグループ
 let gameOverText; // ゲームオーバーテキスト
 let gameOver = false;
@@ -34,7 +34,7 @@ const config = {
     physics: {
         default: "arcade",
         arcade: {
-            debug: true,
+            debug: false,
             gravity: { y: 650 }
         }
     }
@@ -239,6 +239,9 @@ function update() {
         if (lives <= 0) {
             this.physics.pause(); // 物理を一時停止
             gameOver = true;
+            coinCount = 0;
+            score = 0;
+            scoreText.setText(`Coins: ${coinCount} Score: ${score}`);
             gameOverText.setVisible(true); // ゲームオーバーのテキストを表示
         } else {
             player.setPosition(240, 80); // プレイヤーを初期位置に戻す
@@ -251,6 +254,7 @@ function update() {
     }
 
     if (gameOver && retryKey.isDown) {
+        scoreText.setText(`Coins: ${coinCount} Score: ${score}`);
         resetGame(this);
     }
 
@@ -275,7 +279,10 @@ function update() {
 
         // プレイヤーを初期位置にリセット
         player.setPosition(240, 80);
-        lives = 5; // 残機をリセット
+        coinCount = 0;
+        score = 0;
+        scoreText.setText(`Coins: ${coinCount} Score: ${score}`);
+        lives = 2; // 残機をリセット
         updateLives(); // 残機表示を更新
 
         scene.physics.resume();
